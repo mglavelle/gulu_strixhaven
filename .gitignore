@@ -1,0 +1,17 @@
+# Copyrighted source books, extracted text and the database (contains spoilers). Never commit.
+data/
+!data/.gitkeep
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+
+# Eval output
+eval/results/
+
+# Ollama models when using docker-compose
+ollama/

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{% set personal = e.owner_id is not none %}{{ e.name }} · Notes{% endblock %}
+{% block body_class %}page role-{{ role }}{% endblock %}
+{% block body %}{% set personal = e.owner_id is not none %}
+{% set active = 'notes' %}{% include "_topbar.html" %}
+<main class="content narrow">
+  {% if personal %}
+  <a class="back" href="{{ '/notes?mine=1' if editable else '/notes?shared=1' }}">← {{ 'My notes' if editable else 'Shared by players' }}</a>
+  {% else %}
+  <a class="back" href="/notes?type={{ e.type }}">← {{ label_plural[e.type] }}</a>
+  {% endif %}
+  <div class="page-head">
+    <div>
+      <span class="type-pill t-{{ e.type }}">{{ types[e.type] }}</span>
+      {% if personal and not editable %}<span class="muted small">· {{ owner }}'s note, shared with you</span>{% endif %}
+      {% if personal and editable %}<span class="muted small">· {{ 'shared with the DM' if e.shared_with_dm else 'private to you' }}</span>{% endif %}
+      <h1>{{ e.name }}</h1>
+      {% if e.session_date %}<p class="muted">{{ e.session_date }}</p>{% endif %}
+      {% if e.type == 'session' %}<p><a href="/sessions/{{ e.id }}">Open the session log →</a></p>{% endif %}
+      {% if e.tags %}<p class="tags">{% for t in e.tags.split(',') if t.strip() %}<span class="tag">{{ t.strip() }}</span>{% endfor %}</p>{% endif %}
+    </div>
+    {% if editable %}
+    <div class="head-actions">
+      {% if role == 'dm' and not personal %}
+      <form method="post" action="/notes/{{ e.id }}/reveal">
+        <input type="hidden" name="back" value="/notes/{{ e.id }}">
+        <button type="submit" class="reveal {% if e.revealed %}on{% endif %}" aria-pressed="{{ 'true' if e.revealed else 'false' }}">
+          {{ 'Revealed' if e.revealed else 'Hidden' }}
+        </button>
+      </form>
+      {% endif %}
+      <a class="btn" href="/notes/{{ e.id }}/edit">Edit</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <section class="note-section">
+    {% if role == 'dm' and not personal %}<h2 class="section-label">What the players know</h2>{% endif %}
+    {% if e.player_text %}<div data-md>{{ e.player_text }}</div>
+    {% else %}<p class="muted">{{ 'Nothing written yet.' if personal else 'Nothing written for players yet.' }}</p>{% endif %}
+  </section>
+
+  {% if role == 'dm' and not personal %}
+  <section class="note-section dm-section">
+    <h2 class="section-label">DM only</h2>
+    {% if e.dm_text %}<div data-md>{{ e.dm_text }}</div>
+    {% else %}<p class="muted">No private notes.</p>{% endif %}
+  </section>
+  {% endif %}
+  {% if editable %}<p class="muted small">Last updated {{ e.updated_at[:16].replace('T', ' ') }} UTC</p>{% endif %}
+</main>
+<script src="/static/md.js?v={{ asset_v() }}"></script>
+{% endblock %}

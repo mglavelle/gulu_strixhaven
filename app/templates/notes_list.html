@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Notes · Strixhaven Companion{% endblock %}
+{% block body_class %}page role-{{ role }}{% endblock %}
+{% block body %}
+{% set active = 'notes' %}{% include "_topbar.html" %}
+<main class="content">
+  <div class="page-head">
+    <div>
+      <h1>{% if mine %}My notes{% elif shared %}Shared by players{% else %}Campaign notes{% endif %}</h1>
+      <p class="muted">
+        {% if mine %}Only you can see these — unless you tick "Share with DM" on a note. The Ask page searches them for you.
+        {% elif shared %}Notes players chose to share with you. Read-only.
+        {% elif role == 'dm' %}Sessions, NPCs, places and quests. Players see only entries you reveal, and only their "players know" text.
+        {% else %}What the party knows so far.{% endif %}
+      </p>
+    </div>
+    <a class="btn primary" href="/notes/new{% if type and type != 'session' %}?type={{ type }}{% endif %}">
+      {{ 'New entry' if role == 'dm' else 'New note' }}</a>
+  </div>
+
+  <div class="view-switch" role="tablist">
+    <a role="tab" class="{% if not mine and not shared %}on{% endif %}" href="/notes" aria-selected="{{ 'true' if not mine and not shared else 'false' }}">Campaign</a>
+    {% if role == 'dm' %}
+      <a role="tab" class="{% if shared %}on{% endif %}" href="/notes?shared=1" aria-selected="{{ 'true' if shared else 'false' }}">Shared by players <span class="count">{{ shared_count }}</span></a>
+    {% else %}
+      <a role="tab" class="{% if mine %}on{% endif %}" href="/notes?mine=1" aria-selected="{{ 'true' if mine else 'false' }}">My notes <span class="count">{{ mine_count }}</span></a>
+    {% endif %}
+  </div>
+
+  {% set base = '/notes?' ~ ('mine=1&' if mine else '') ~ ('shared=1&' if shared else '') %}
+  <form class="filters" method="get" action="/notes">
+    <div class="chips" role="list">
+      <a role="listitem" class="chip {% if not type %}on{% endif %}" href="{{ base }}{% if q %}q={{ q|urlencode }}{% endif %}">All <span class="count">{{ counts.values()|sum }}</span></a>
+      {% for t, label in types.items() %}
+        {% if counts.get(t) or (role == 'dm' and not shared and not mine) %}
+        <a role="listitem" class="chip {% if type == t %}on{% endif %}" href="{{ base }}type={{ t }}{% if q %}&q={{ q|urlencode }}{% endif %}">{{ label_plural[t] }} <span class="count">{{ counts.get(t, 0) }}</span></a>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% if type %}<input type="hidden" name="type" value="{{ type }}">{% endif %}
+    {% if mine %}<input type="hidden" name="mine" value="1">{% endif %}
+    {% if shared %}<input type="hidden" name="shared" value="1">{% endif %}
+    <input type="search" name="q" value="{{ q or '' }}" placeholder="Filter by name or text…" aria-label="Filter notes">
+  </form>
+
+  {% if entries %}
+  <ul class="entry-list">
+    {% for e in entries %}
+    <li class="entry-row">
+      <a class="entry-link" href="/notes/{{ e.id }}">
+        <span class="type-pill t-{{ e.type }}">{{ types[e.type] }}</span>
+        <span class="entry-name">{{ e.name }}</span>
+        {% if e.session_date %}<span class="muted small">{{ e.session_date }}</span>{% endif %}
+        {% if shared %}<span class="muted small">by {{ owners.get(e.owner_id, '?') }}</span>{% endif %}
+        {% if mine and e.shared_with_dm %}<span class="tag">shared with DM</span>{% endif %}
+        <span class="entry-snippet muted">{{ (e.player_text if role != 'dm' or e.player_text else e.dm_text)[:140] }}</span>
+      </a>
+      {% if role == 'dm' and not shared %}
+      <form method="post" action="/notes/{{ e.id }}/reveal" class="reveal-form">
+        <button type="submit" class="reveal {% if e.revealed %}on{% endif %}"
+                title="{{ 'Revealed to players — click to hide' if e.revealed else 'Hidden from players — click to reveal' }}"
+                aria-pressed="{{ 'true' if e.revealed else 'false' }}">
+          {{ 'Revealed' if e.revealed else 'Hidden' }}
+        </button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="empty-state">
+    {% if q or type %}<p>No entries match.</p>
+    {% elif mine %}<p>No notes yet. Jot down clues, NPC names, theories — anything you want to remember.</p>
+      <a class="btn primary" href="/notes/new">Write a note</a>
+    {% elif shared %}<p>No player has shared a note with you yet.</p>
+    {% elif role == 'dm' %}<p>No notes yet. Start with the NPCs the party has met.</p>
+    {% else %}<p>The DM hasn't shared any notes yet. Your own notes are under <a href="/notes?mine=1">My notes</a>.</p>{% endif %}
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

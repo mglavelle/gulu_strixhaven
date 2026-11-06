@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block body_class %}app-page role-{{ role }}{% endblock %}
+{% block body %}
+{% set active = 'ask' %}{% include "_topbar.html" %}
+
+<div class="layout">
+  <main class="thread-wrap">
+    <section id="thread" class="thread" aria-live="polite">
+      <div class="empty" id="empty">
+        <h2>Ask about the rules{% if role == 'dm' %}, the adventure{% endif %} or an NPC</h2>
+        <p class="muted">Answers come only from the books, with numbered citations you can click to read the source.</p>
+        <div class="examples">
+          <button type="button" class="example">Can I make an opportunity attack against a grappled creature?</button>
+          <button type="button" class="example">How does concentration work when I take damage?</button>
+          <button type="button" class="example">What does the Prone condition do?</button>
+          {% if role == 'dm' %}
+          <button type="button" class="example" data-scope="adventure">Give me a quick overview of the five colleges.</button>
+          {% else %}
+          <button type="button" class="example">How do death saving throws work?</button>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <form id="ask-form" class="composer" autocomplete="off">
+      <textarea id="question" rows="1" placeholder="Ask a question…" aria-label="Question" maxlength="2000" required></textarea>
+      <div class="composer-row">
+        <div class="composer-options">
+          {% if role == 'dm' %}
+          <label class="select-wrap">
+            <span class="sr-only">Search in</span>
+            <select id="scope">
+              <option value="all">All books</option>
+              <option value="rules">Rules only</option>
+              <option value="adventure">Adventure only</option>
+              <option value="notes">Notes only</option>
+            </select>
+          </label>
+          {% endif %}
+          <button type="button" class="btn ghost small" id="new-chat" title="Start a new conversation">New chat</button>
+          <label class="check" title="Reasons before answering. Better with calculations, but takes ~30–60 seconds.">
+            <input type="checkbox" id="careful"> Careful <span class="muted">(slower)</span>
+          </label>
+        </div>
+        <button type="submit" class="btn primary" id="send">Ask</button>
+      </div>
+    </form>
+  </main>
+
+  <aside id="passage" class="passage" aria-label="Source passage" hidden>
+    <div class="passage-head">
+      <div>
+        <div class="passage-cite" id="passage-cite"></div>
+        <div class="passage-path" id="passage-path"></div>
+      </div>
+      <button type="button" class="btn ghost small" id="passage-close" aria-label="Close passage">✕</button>
+    </div>
+    <div class="passage-body md" id="passage-body"></div>
+  </aside>
+</div>
+
+<script>window.APP = { role: "{{ role }}", model: "{{ model }}" };</script>
+<script src="/static/md.js?v={{ asset_v() }}"></script>
+<script src="/static/ask.js?v={{ asset_v() }}"></script>
+{% endblock %}

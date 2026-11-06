@@ -1,0 +1,91 @@
+# Retrieval test set. Run:  python -m eval.run_eval
+#
+# A question passes at rank N if one of the top-N results has a heading path containing
+# any `expect` string, or (if given) chunk text containing any `expect_text` string.
+# Matching is case-insensitive. Add real questions from your sessions here over time.
+
+rules:
+  - q: How does advantage and disadvantage work?
+    expect: [Advantage]
+  - q: What happens when I drop to 0 hit points?
+    expect: [Dropping to 0 Hit Points]
+  - q: How do death saving throws work?
+    expect: [Death Saving Throw]
+  - q: What does the prone condition do?
+    expect: [Prone]
+  - q: How much damage does fireball do and what saving throw is it?
+    expect: [Fireball]
+  - q: Can I cast shield as a reaction and how much AC does it give?
+    expect: [Spell Descriptions > Shield]
+  - q: How long is a short rest and what can I do during one?
+    expect: [Short Rest]
+  - q: Do I lose concentration on a spell when I take damage?
+    expect: [Concentration]
+  - q: What are the stats for a goblin warrior?
+    expect: [Goblin Warrior]
+  - q: How much damage does an adult red dragon's breath weapon do?
+    expect: [Adult Red Dragon]
+  - q: How does a bag of holding work?
+    expect: [Bag of Holding]
+  - q: How much does half cover add to AC?
+    expect: [Cover]
+  - q: How does the help action work?
+    expect: [Help]
+  - q: How much damage do you take from falling?
+    expect: [Falling]
+  - q: What are the requirements to multiclass into wizard?
+    expect: [Multiclassing]
+  - q: What do I roll to hide from enemies?
+    expect: [Hide, Hiding]
+  - q: How does a wizard's Arcane Recovery work?
+    expect: [Arcane Recovery]
+    expect_text: [Arcane Recovery]
+  - q: What are the effects of exhaustion?
+    expect: [Exhaustion]
+  - q: How does sneak attack work?
+    expect: [Sneak Attack]
+    expect_text: ["Sneak Attack."]
+  - q: What does a barbarian's rage do?
+    expect: [Rage]
+    expect_text: ["Rage."]
+  - q: How do I calculate my spell save DC?
+    expect: [Spell Save DC]
+    expect_text: ["Spell save DC** = 8"]
+  - q: How many hit points does a potion of healing restore?
+    expect: [Potion of Healing, Potions of Healing]
+  - q: How far can my character jump?
+    expect: [Long Jump, High Jump, Jumping]
+  - q: What does being invisible do in combat?
+    expect: [Invisible]
+  - q: How long can my character hold their breath underwater?
+    expect: [Suffocation]
+  - q: What happens when an unconscious creature gets hit?
+    expect: [Unconscious, Dropping to 0 Hit Points]
+  - q: What is the AC and cost of plate armor?
+    expect: [Armor]
+    expect_text: [Plate Armor]
+  - q: How much does cure wounds heal?
+    expect: [Cure Wounds]
+  - q: How do I stop an enemy wizard from casting a spell?
+    expect: [Counterspell]
+  - q: What can I do with my bonus action?
+    expect: [Bonus Action]
+
+# Questions about the adventure. Written by the DM (contains spoilers) - the eval
+# prints only pass/fail and page numbers for these, never the book text.
+adventure: []
+#  - q: Who is the dean of Lorehold?
+#    expect: [...]
+
+# Player-role searches that must NEVER return DM-only text. These only test the
+# visibility filter, so they are safe to read.
+spoiler_checks:
+  - Lorehold college
+  - Quandrix
+  - Prismari
+  - Silverquill
+  - Witherbloom
+  - the final exam
+  - who is the villain of the adventure
+  - Strixhaven campus map
+  - student dice and relationships

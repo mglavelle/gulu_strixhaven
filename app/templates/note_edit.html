@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{% set personal = e.owner_id is not none %}{{ 'Edit' if e.id else 'New' }} {{ 'note' if personal else 'entry' }} · Notes{% endblock %}
+{% block body_class %}page role-{{ role }}{% endblock %}
+{% block body %}{% set personal = e.owner_id is not none %}
+{% set active = 'notes' %}{% include "_topbar.html" %}
+<main class="content narrow">
+  <a class="back" href="{{ '/notes/' ~ e.id if e.id else ('/notes?mine=1' if personal else '/notes') }}">← Back</a>
+  <h1>{{ 'Edit' if e.id else 'New' }} {{ 'note' if personal else 'entry' }}</h1>
+  {% if personal %}<p class="muted">Private to you. The Ask page can use it when <em>you</em> ask questions.</p>{% endif %}
+
+  <form method="post" class="note-form">
+    <div class="row">
+      <label class="field">
+        <span>Type</span>
+        <select name="type" id="type">
+          {% for t, label in (personal_types if personal else types).items() %}
+          <option value="{{ t }}" {% if e.type == t %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field grow">
+        <span>{{ 'Title' if personal else 'Name' }}</span>
+        <input name="name" value="{{ e.name }}" required maxlength="120" autofocus
+               placeholder="{{ 'e.g. Who stole the relic? or Professor Onyx' if personal else 'e.g. Session 3 — The Bow\'s Bane, or Professor Onyx' }}">
+      </label>
+      {% if not personal %}
+      <label class="field" id="date-field">
+        <span>Session date</span>
+        <input type="date" name="session_date" value="{{ e.session_date or '' }}">
+      </label>
+      {% endif %}
+    </div>
+
+    {% if personal %}
+    <label class="field">
+      <span>My notes</span>
+      <textarea name="player_text" rows="10" placeholder="Clues, names, theories, things to ask the DM…">{{ e.player_text }}</textarea>
+    </label>
+    {% else %}
+    <label class="field">
+      <span>What the players know <span class="muted">— shown to players when revealed</span></span>
+      <textarea name="player_text" rows="7" placeholder="Recap, description, what the party has learned…">{{ e.player_text }}</textarea>
+    </label>
+
+    <label class="field dm-field">
+      <span>DM only <span class="muted">— never shown to players</span></span>
+      <textarea name="dm_text" rows="7" placeholder="Secrets, motivations, stat block notes, plans for next session…">{{ e.dm_text }}</textarea>
+    </label>
+    {% endif %}
+
+    <div class="row">
+      <label class="field grow">
+        <span>Tags <span class="muted">— comma separated</span></span>
+        <input name="tags" value="{{ e.tags }}" placeholder="Lorehold, faculty, rival">
+      </label>
+      {% if personal %}
+      <label class="check big" title="The DM can read (not edit) this note">
+        <input type="checkbox" name="shared_with_dm" value="1" {% if e.shared_with_dm %}checked{% endif %}>
+        Share with DM
+      </label>
+      {% else %}
+      <label class="check big">
+        <input type="checkbox" name="revealed" value="1" {% if e.revealed %}checked{% endif %}>
+        Reveal to players
+      </label>
+      {% endif %}
+    </div>
+    <p class="muted small">Markdown works: **bold**, *italic*, - lists. Saving also updates what the Ask page can find.</p>
+
+    <div class="form-actions">
+      <button type="submit" class="btn primary">Save</button>
+      <a class="btn ghost" href="{{ '/notes/' ~ e.id if e.id else ('/notes?mine=1' if personal else '/notes') }}">Cancel</a>
+    </div>
+  </form>
+
+  {% if e.id %}
+  <form method="post" action="/notes/{{ e.id }}/delete" class="danger-zone">
+    <button type="submit" class="btn ghost danger" data-confirm="Delete “{{ e.name }}”? This cannot be undone." data-confirm-label="Click again to delete">Delete {{ 'note' if personal else 'entry' }}</button>
+  </form>
+  {% endif %}
+</main>
+{% if not personal %}
+<script>
+  // Only sessions have a date.
+  const typeSel = document.getElementById("type"), dateField = document.getElementById("date-field");
+  const sync = () => { dateField.hidden = typeSel.value !== "session"; };
+  typeSel.addEventListener("change", sync); sync();
+</script>
+{% endif %}
+{% endblock %}

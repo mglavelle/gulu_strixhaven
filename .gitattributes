@@ -1,0 +1,5 @@
+# Keep Linux line endings in the repo (the Docker image and Unraid run Linux).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary

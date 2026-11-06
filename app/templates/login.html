@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Strixhaven Companion{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block body %}
+<main class="login-card">
+  <div class="crest" aria-hidden="true">
+    <svg viewBox="0 0 32 32"><path d="M16 3 29 10v12L16 29 3 22V10z"/><path d="M16 3v26M3 10l13 7 13-7" class="crest-lines"/></svg>
+  </div>
+  <h1>Strixhaven Companion</h1>
+  <p class="muted">Rules, lore and notes for our table.</p>
+
+  {% if not configured %}
+    <div class="notice">
+      No logins exist yet. Put a <code>DM_PASSWORD</code> in <code>.env</code> and restart
+      the app, then add players on the DM's Players page.
+    </div>
+  {% endif %}
+
+  <form method="post" action="/login" class="login-form">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password"
+           required autofocus {% if not configured %}disabled{% endif %}>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <button type="submit" class="btn primary" {% if not configured %}disabled{% endif %}>Enter</button>
+  </form>
+  <p class="muted small">Each player has their own password; it opens your own notes and your character.</p>
+</main>
+{% endblock %}

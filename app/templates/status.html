@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Campaign status · Strixhaven Companion{% endblock %}
+{% block body_class %}page role-{{ role }}{% endblock %}
+{% block body %}
+{% set active = 'sessions' %}{% include "_topbar.html" %}
+<main class="content wide">
+  <a class="back" href="/sessions">← Sessions</a>
+  <div class="page-head">
+    <div>
+      <h1>Campaign status</h1>
+      <p class="muted">Your bookmark in the story — where the party is and where it's heading. Session prep starts from it. DM only.</p>
+    </div>
+  </div>
+  {% if saved %}<div class="banner ok" role="status">Status saved.</div>{% endif %}
+
+  <div class="session-layout">
+    <section id="status">
+      <form method="post" action="/status" class="log-form status-form" id="status-form">
+        <h2 class="section-label">Where we are</h2>
+        <textarea name="where_text" id="where_text" rows="6" placeholder="e.g. End of Chapter 2: the party just won the Mage Tower match and Tyrion has the silver key from the cellar. Kaine suspects Professor X.">{{ status.where_text if status else '' }}</textarea>
+        <h2 class="section-label">What's next</h2>
+        <textarea name="next_text" id="next_text" rows="6" placeholder="e.g. Start Chapter 3 (Hunt for Mage Tower). Follow up on the silver key. Spotlight Yasna next session.">{{ status.next_text if status else '' }}</textarea>
+        <div class="log-form-row">
+          <span class="muted small">{% if status %}Last updated {{ status.created_at[:16].replace('T', ' ') }} UTC{% else %}Not written yet{% endif %}</span>
+          <button class="btn primary" type="submit">Save status</button>
+        </div>
+      </form>
+
+      {% if history %}
+      <details class="status-history">
+        <summary>Earlier versions ({{ history|length }})</summary>
+        <ol>
+          {% for h in history %}
+          <li>
+            <span class="muted small">{{ h.created_at[:16].replace('T', ' ') }} UTC</span>
+            <div class="small"><strong>Where:</strong> <span data-md>{{ h.where_text or '—' }}</span></div>
+            <div class="small"><strong>Next:</strong> <span data-md>{{ h.next_text or '—' }}</span></div>
+          </li>
+          {% endfor %}
+        </ol>
+      </details>
+      {% endif %}
+    </section>
+
+    <aside class="ai-panel">
+      <h2 class="section-label">Catch me up</h2>
+      <p class="muted small ai-help">Reads all {{ sessions }} session{{ '' if sessions == 1 else 's' }} ({{ events }} log entr{{ 'y' if events == 1 else 'ies' }}), your status note, open quests, the adventure book and the party, then writes the story so far, where you are, open threads and what's next. Nothing is saved until you choose to.</p>
+      <div class="ai-controls">
+        <button type="button" class="btn primary" id="ai-run">Catch me up</button>
+        <label class="check" title="Reasons first: better briefing, ~1–2 minutes"><input type="checkbox" id="ai-careful"> Careful</label>
+      </div>
+      <div class="ai-status muted small" id="ai-status" hidden></div>
+      <div class="ai-output md" id="ai-output" hidden></div>
+      <div class="ai-sources" id="ai-sources"></div>
+      <div class="ai-save" id="ai-use" hidden>
+        <button type="button" class="btn primary small" id="ai-fill">Copy "where" &amp; "next" into my status</button>
+      </div>
+    </aside>
+  </div>
+</main>
+<script src="/static/md.js?v={{ asset_v() }}"></script>
+<script src="/static/status.js?v={{ asset_v() }}"></script>
+{% endblock %}

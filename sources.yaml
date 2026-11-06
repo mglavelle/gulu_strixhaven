@@ -1,0 +1,23 @@
+# Source books to ingest. Files live in data/sources/ (git-ignored).
+#   key:         short id used in citations
+#   kind:        rules | adventure
+#   visibility:  public (DM + players) | dm (DM only)
+#   page_offset: printed page number = PDF page + page_offset (for citations)
+#   heading_mode: auto (default) | markdown | bookmarks
+#                 bookmarks = take section levels from the PDF's bookmarks; auto picks it
+#                 when the extractor flattened most headings to one deep level
+#   skip_sections: extra top-level sections to leave out (contents/index always are)
+sources:
+  - key: SRD
+    title: System Reference Document 5.2.1
+    file: srd-5.2.1.pdf
+    kind: rules
+    visibility: public
+    page_offset: 0
+
+  - key: Strixhaven
+    title: "Strixhaven: A Curriculum of Chaos"
+    file: strixhaven.pdf
+    kind: adventure
+    visibility: dm
+    page_offset: 0   # TODO (DM): set so citations match the printed book

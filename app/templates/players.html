@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Players · Strixhaven Companion{% endblock %}
+{% block body_class %}page role-{{ role }}{% endblock %}
+{% block body %}
+{% set active = 'players' %}{% include "_topbar.html" %}
+<main class="content narrow">
+  <div class="page-head">
+    <div>
+      <h1>Players</h1>
+      <p class="muted">Each player signs in with their own password and gets private notes. Link each login to a character so "my character" questions work.</p>
+    </div>
+  </div>
+
+  {% if ok %}<div class="banner ok" role="status">{{ ok }}.</div>{% endif %}
+  {% if error %}<div class="banner err" role="alert">{{ error }}</div>{% endif %}
+
+  <ul class="entry-list">
+    {% for u in users %}
+    <li class="entry-row player-row">
+      <div class="player-main">
+        <span class="entry-name">{{ u.name }}</span>
+        {% if u.role == 'dm' %}<span class="type-pill t-quest">DM</span>
+        <span class="muted small">Password comes from DM_PASSWORD in .env.</span>
+        {% else %}
+        <span class="muted small">{{ u.notes }} private note{{ '' if u.notes == 1 else 's' }}</span>
+        {% endif %}
+      </div>
+      {% if u.role == 'player' %}
+      <div class="player-actions">
+        <form method="post" action="/players/{{ u.id }}" class="inline-form">
+          <input type="hidden" name="action" value="character">
+          <label class="sr-only" for="char-{{ u.id }}">Character for {{ u.name }}</label>
+          <select id="char-{{ u.id }}" name="character_id" onchange="this.form.submit()">
+            <option value="">— no character —</option>
+            {% for c in chars %}<option value="{{ c.id }}" {% if c.id == u.character_id %}selected{% endif %}>{{ c.name }}{{ ' (' ~ c.player ~ ')' if c.player }}</option>{% endfor %}
+          </select>
+        </form>
+        <details class="edit-event">
+          <summary class="linklike">New password</summary>
+          <form method="post" action="/players/{{ u.id }}" class="inline-form">
+            <input type="hidden" name="action" value="password">
+            <input name="password" required placeholder="New password" aria-label="New password for {{ u.name }}">
+            <button class="btn small" type="submit">Set</button>
+          </form>
+        </details>
+        <form method="post" action="/players/{{ u.id }}" class="inline-form">
+          <input type="hidden" name="action" value="delete">
+          <button class="icon-btn" type="submit" aria-label="Remove {{ u.name }}" title="Remove player"
+                  data-confirm="Remove {{ u.name }}? Their {{ u.notes }} private note(s) will be deleted too." data-confirm-label="Remove?">✕</button>
+        </form>
+      </div>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+
+  <section class="sync-box">
+    <h2>Add a player</h2>
+    <form method="post" action="/players/add" class="note-form">
+      <div class="row">
+        <label class="field grow"><span>First name</span>
+          <input name="name" required maxlength="40" placeholder="e.g. Sam" autocomplete="off"></label>
+        <label class="field grow"><span>Password <span class="muted">— blank = their first name</span></span>
+          <input name="password" maxlength="100" placeholder="(first name)" autocomplete="off"></label>
+      </div>
+      <label class="field"><span>Character</span>
+        <select name="character_id">
+          <option value="">— none yet —</option>
+          {% for c in chars %}<option value="{{ c.id }}" {% if c.id in taken %}disabled{% endif %}>{{ c.name }}{{ ' (' ~ c.player ~ ')' if c.player }}{{ ' — already linked' if c.id in taken }}</option>{% endfor %}
+        </select>
+      </label>
+      <div class="form-actions"><button class="btn primary" type="submit">Add player</button></div>
+    </form>
+    <p class="muted small">Passwords aren't case-sensitive and must differ between people, because the password alone decides who signs in.
+      First names are easy to guess — fine at home, but before putting the Companion on the internet, have players pick real passwords under Account.</p>
+  </section>
+</main>
+{% endblock %}

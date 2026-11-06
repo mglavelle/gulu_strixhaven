@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Party · Strixhaven Companion{% endblock %}
+{% block body_class %}page role-{{ role }}{% endblock %}
+{% block body %}
+{% set active = 'party' %}{% include "_topbar.html" %}
+<main class="content wide">
+  <div class="page-head">
+    <div>
+      <h1>The party</h1>
+      <p class="muted">{{ chars|length }} character{{ '' if chars|length == 1 else 's' }}{% if chars %} · from D&amp;D Beyond{% endif %}. The Ask page can answer questions about these sheets.</p>
+    </div>
+    {% if role == 'dm' %}<a class="btn" href="#sync">Sync from D&amp;D Beyond</a>{% endif %}
+  </div>
+
+  {% if sync == 'ok' %}<div class="banner ok" role="status">Synced {{ sync_n }} character{{ '' if sync_n == '1' else 's' }} from D&amp;D Beyond.</div>
+  {% elif sync == 'badkey' %}<div class="banner err" role="alert">That bookmark's import key is out of date. Re-drag the button below to your bookmarks bar.</div>
+  {% elif sync == 'baddata' %}<div class="banner err" role="alert">The data from D&amp;D Beyond couldn't be read. Try again, or upload the files instead.</div>{% endif %}
+
+  {% if not chars %}
+  <div class="empty-state">
+    <p>No characters imported yet.</p>
+    {% if role == 'dm' %}<p><a href="#sync">Sync them from D&amp;D Beyond</a> below.</p>{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="party-grid">
+  {% for c in chars %}
+    <article class="char-card" id="c{{ c.id }}">
+      <header class="char-head">
+        {% if c.avatar %}<img class="avatar" src="{{ c.avatar }}" alt="" loading="lazy" referrerpolicy="no-referrer">
+        {% else %}<div class="avatar placeholder" aria-hidden="true">{{ c.name[:1] }}</div>{% endif %}
+        <div>
+          <h2>{{ c.name }}</h2>
+          <p class="muted small">Level {{ c.level }} {{ c.race }} {{ c.class_text }}</p>
+          <p class="muted small">{{ c.player }}{% if c.background %} · {{ c.background }}{% endif %}</p>
+        </div>
+      </header>
+
+      <dl class="vitals">
+        <div><dt>AC</dt><dd title="Approximate{% if c.ac_note %}: {{ c.ac_note }}{% endif %}">{{ c.ac }}</dd></div>
+        <div><dt>HP</dt><dd>{{ c.hp.max }}</dd></div>
+        <div><dt>Speed</dt><dd>{{ c.speed }}</dd></div>
+        <div><dt>Init</dt><dd>{{ signed(c.initiative) }}</dd></div>
+        <div><dt>Pass. Perc.</dt><dd>{{ c.passive_perception }}</dd></div>
+      </dl>
+
+      <div class="abilities">
+        {% for ab, v in c.abilities.items() %}
+        <div class="ab {% if c.saves[ab].prof %}save-prof{% endif %}" title="{{ ability_names[ab] }} save {{ signed(c.saves[ab].bonus) }}{{ ' (proficient)' if c.saves[ab].prof }}">
+          <span class="ab-name">{{ ab|upper }}</span>
+          <span class="ab-mod">{{ signed(v.mod) }}</span>
+          <span class="ab-score">{{ v.score }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <p class="small skills-line"><strong>Skills</strong>
+        {% for k, s in c.skills.items() if s.prof %}{{ k.replace('-', ' ')|title }} {{ signed(s.bonus) }}{{ '★' if s.prof == 'expertise' }}{{ ', ' if not loop.last }}{% else %}<span class="muted">none</span>{% endfor %}
+      </p>
+      {% if c.spellcasting %}
+      <p class="small">{% for sc in c.spellcasting %}<strong>Spell DC</strong> {{ sc.save_dc }} · <strong>Attack</strong> {{ signed(sc.attack) }} <span class="muted">({{ ability_names[sc.ability] }})</span>{% endfor %}</p>
+      {% endif %}
+
+      {% if c.spells %}
+      <details><summary>Spells ({{ c.spells|length }})</summary>
+        {% for lvl in c.spells|map(attribute='level')|unique|sort %}
+        <p class="small"><strong>{{ 'Cantrips' if lvl == 0 else 'Level ' ~ lvl }}:</strong>
+          {% for s in c.spells if s.level == lvl %}<span class="{{ '' if s.prepared else 'muted' }}">{{ s.name }}</span>{{ ', ' if not loop.last }}{% endfor %}</p>
+        {% endfor %}
+      </details>
+      {% endif %}
+      <details><summary>Features &amp; traits ({{ c.features|length }})</summary>
+        <ul class="feature-list">
+        {% for f in c.features %}<li><strong>{{ f.name }}</strong> <span class="muted">· {{ f.source }}</span>{% if f.text %}<br><span class="small">{{ f.text }}</span>{% endif %}</li>{% endfor %}
+        </ul>
+      </details>
+      <details><summary>Equipment &amp; proficiencies</summary>
+        <p class="small"><strong>Gear:</strong> {% for i in c.inventory %}{{ i.name }}{{ ' ×' ~ i.qty if i.qty and i.qty > 1 }}{{ ' (equipped)' if i.equipped }}{{ ', ' if not loop.last }}{% endfor %}</p>
+        {% set coins = c.currencies.items()|selectattr(1)|list %}
+        {% if coins %}<p class="small"><strong>Coins:</strong> {% for k, v in coins %}{{ v }} {{ k }}{{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
+        {% if c.languages %}<p class="small"><strong>Languages:</strong> {{ c.languages|join(', ') }}</p>{% endif %}
+        {% if c.senses %}<p class="small"><strong>Senses:</strong> {{ c.senses|join(', ') }}</p>{% endif %}
+        {% if c.other_proficiencies %}<p class="small"><strong>Proficiencies:</strong> {{ c.other_proficiencies|join(', ') }}</p>{% endif %}
+        {% for k, v in c.defenses.items() if v %}<p class="small"><strong>{{ k|title }}:</strong> {{ v|join(', ') }}</p>{% endfor %}
+      </details>
+
+      <footer class="char-foot muted small">
+        <a href="https://www.dndbeyond.com/characters/{{ c.ddb_id }}" target="_blank" rel="noopener">D&amp;D Beyond ↗</a>
+        <span>Synced {{ c.synced_at[:10] }}</span>
+        {% if role == 'dm' %}
+        <form method="post" action="/party/{{ c.id }}/delete">
+          <button class="linklike" type="submit" data-confirm="Removes {{ c.name }} from the Companion (nothing changes on D&amp;D Beyond)." data-confirm-label="Click again to remove">Remove</button>
+        </form>
+        {% endif %}
+      </footer>
+    </article>
+  {% endfor %}
+  </div>
+
+  {% if role == 'dm' %}
+  <section class="sync-box" id="sync">
+    <h2>Sync from D&amp;D Beyond</h2>
+    <p>The characters in this campaign are private on D&amp;D Beyond, so the Companion can't fetch them by itself.
+       This bookmark borrows <em>your</em> logged-in D&amp;D Beyond session for one click — no password is stored here.</p>
+    <ol>
+      <li>Drag this button to your browser's bookmarks bar:
+        <a class="btn primary bookmarklet" href="{{ bookmarklet }}" onclick="event.preventDefault(); alert('Drag this to your bookmarks bar instead of clicking it here.');">⟳ Sync to Companion</a></li>
+      <li>Open your campaign page on <a href="https://www.dndbeyond.com/my-campaigns" target="_blank" rel="noopener">dndbeyond.com</a> (signed in).</li>
+      <li>Click the bookmark. A message confirms which characters arrived. Run it again whenever characters level up.</li>
+    </ol>
+    <p class="muted small">The bookmark contains a private import key. If it leaks, reset it — then re-drag the new button.</p>
+    <form method="post" action="/party/reset-key">
+      <button class="btn ghost small" type="submit" data-confirm="Old bookmarks will stop working." data-confirm-label="Click again to reset">Reset import key</button>
+    </form>
+
+    <h3>Or upload exported files</h3>
+    <form method="post" action="/party/upload" enctype="multipart/form-data" class="upload-form">
+      <input type="file" name="files" accept=".json,application/json" multiple required>
+      <button class="btn small" type="submit">Upload</button>
+    </form>
+    <p class="muted small">D&amp;D Beyond character JSON (the <code>character-service</code> response or its <code>data</code> object). Several files at once is fine.</p>
+  </section>
+  {% endif %}
+</main>
+{% endblock %}

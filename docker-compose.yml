@@ -1,0 +1,39 @@
+# Strixhaven Companion + Ollama.
+#
+#   cp .env.example .env      # set DM_PASSWORD and SESSION_SECRET
+#   docker compose up -d
+#   docker compose exec ollama ollama pull qwen3.5:latest
+#   docker compose exec ollama ollama pull nomic-embed-text
+#   # copy the PDFs into ./data/sources, then:
+#   docker compose exec companion python -m ingest.pdf_ingest
+#
+# Already running Ollama elsewhere? Delete the `ollama` service and set OLLAMA_URL in .env.
+services:
+  companion:
+    image: ghcr.io/mglavelle/gulu_strixhaven:latest
+    build: .
+    container_name: strixhaven-companion
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+    volumes:
+      - ./data:/data            # books (data/sources), companion.db, extracted text
+    ports:
+      - "8000:8000"             # or drop this and reach it through SWAG on the same network
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: strixhaven-ollama
+    restart: unless-stopped
+    volumes:
+      - ./ollama:/root/.ollama  # downloaded models (~7 GB)
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m
+      # Intel Arc (Unraid server): Vulkan backend. Untested on the A580 - see README.
+      OLLAMA_VULKAN: "1"
+    devices:
+      - /dev/dri:/dev/dri       # Intel GPU. NVIDIA instead: remove this and add `gpus: all`.

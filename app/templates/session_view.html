@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}{{ s.name }} · Sessions{% endblock %}
+{% block body_class %}page role-{{ role }}{% endblock %}
+{% block body %}
+{% set active = 'sessions' %}{% include "_topbar.html" %}
+<main class="content wide">
+  <a class="back" href="/sessions">← Sessions</a>
+  <div class="page-head">
+    <div>
+      <h1>{{ s.name }}</h1>
+      {% if s.session_date %}<p class="muted">{{ s.session_date }}</p>{% endif %}
+    </div>
+    {% if role == 'dm' %}
+    <div class="head-actions">
+      <form method="post" action="/notes/{{ s.id }}/reveal">
+        <input type="hidden" name="back" value="/sessions/{{ s.id }}">
+        <button type="submit" class="reveal {% if s.revealed %}on{% endif %}" aria-pressed="{{ 'true' if s.revealed else 'false' }}"
+                title="Players see a session's recap and revealed log entries only once the session is revealed">
+          {{ 'Revealed' if s.revealed else 'Hidden' }}</button>
+      </form>
+      <a class="btn" href="/notes/{{ s.id }}/edit">Edit name, date &amp; texts</a>
+      <form method="post" action="/sessions/{{ s.id }}/delete">
+        <button type="submit" class="btn ghost danger" data-confirm-label="Click again to delete"
+                data-confirm="Deletes “{{ s.name }}”{{ ' and its ' ~ events|length ~ ' log entr' ~ ('y' if events|length == 1 else 'ies') if events else '' }}. This cannot be undone.">Delete session</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="session-layout">
+    <section class="session-main" id="log">
+      {% if s.player_text %}
+      <section class="note-section" id="recap-text">
+        <h2 class="section-label">Recap</h2>
+        <div data-md>{{ s.player_text }}</div>
+      </section>
+      {% endif %}
+
+      {% if role == 'dm' %}
+      <form method="post" action="/sessions/{{ s.id }}/events" class="log-form" id="log-form">
+        <h2 class="section-label">Log what happened</h2>
+        <div class="kind-chips" role="radiogroup" aria-label="Kind">
+          {% for k, label in kinds.items() %}
+          <label class="kind-chip"><input type="radio" name="kind" value="{{ k }}" {% if loop.first %}checked{% endif %}><span>{{ label }}</span></label>
+          {% endfor %}
+        </div>
+        {% if party %}
+        <div class="char-chips" aria-label="Characters involved">
+          {% for name in party %}
+          <label class="char-chip"><input type="checkbox" name="characters" value="{{ name }}"><span>{{ name.split(' ')[0] }}</span></label>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <textarea name="text" rows="3" required placeholder="e.g. Aldric asked Professor Onyx about the stolen relic — she said it was last seen in the Biblioplex.&#10;Or: Fought 3 Pest Spirits in the greenhouse. George took 18 damage; Kaine's Moonbeam ended it in 3 rounds."></textarea>
+        <div class="log-form-row">
+          <label class="check"><input type="checkbox" name="revealed" value="1" checked> Players know this</label>
+          <button class="btn primary" type="submit">Add to log</button>
+        </div>
+        <p class="muted small">Ctrl+Enter adds. Untick "Players know this" for secrets (an NPC lied, a hidden clue).</p>
+      </form>
+      {% endif %}
+
+      <h2 class="section-label log-title">Session log <span class="muted">({{ events|length }})</span></h2>
+      {% if events %}
+      <ol class="log-list" reversed>
+        {% for e in events %}
+        <li class="log-item {% if not e.revealed %}secret{% endif %}" id="ev{{ e.id }}">
+          <div class="log-meta">
+            <span class="type-pill k-{{ e.kind }}">{{ kinds[e.kind] }}</span>
+            {% if e.characters %}<span class="small">{{ e.characters }}</span>{% endif %}
+            <time class="muted small" data-ts="{{ e.created_at }}"></time>
+            {% if role == 'dm' and not e.revealed %}<span class="tag-dm">DM only</span>{% endif %}
+          </div>
+          <div data-md>{{ e.text }}</div>
+          {% if role == 'dm' %}
+          <div class="log-actions">
+            <form method="post" action="/sessions/{{ s.id }}/events/{{ e.id }}">
+              <input type="hidden" name="action" value="reveal">
+              <button class="linklike muted" type="submit">{{ 'Hide from players' if e.revealed else 'Reveal to players' }}</button>
+            </form>
+            <a class="linklike" href="/notes/new?type={{ 'npc' if e.kind == 'roleplay' else 'lore' }}&name={{ e.text[:60]|urlencode }}&{{ 'player_text' if e.revealed else 'dm_text' }}={{ e.text|urlencode }}&tags={{ s.name|urlencode }}">→ Note</a>
+            <details class="edit-event">
+              <summary class="linklike">Edit</summary>
+              <form method="post" action="/sessions/{{ s.id }}/events/{{ e.id }}" class="edit-event-form">
+                <select name="kind">{% for k, label in kinds.items() %}<option value="{{ k }}" {% if e.kind == k %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+                <input name="characters" value="{{ e.characters }}" placeholder="Characters (comma separated)">
+                <textarea name="text" rows="3" required>{{ e.text }}</textarea>
+                <label class="check"><input type="checkbox" name="revealed" value="1" {% if e.revealed %}checked{% endif %}> Players know this</label>
+                <div class="form-actions">
+                  <button class="btn small primary" type="submit" name="action" value="save">Save</button>
+                  <button class="btn small ghost danger" type="submit" name="action" value="delete" data-confirm="Deletes this log entry." data-confirm-label="Click again to delete">Delete</button>
+                </div>
+              </form>
+            </details>
+          </div>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p class="muted">{% if role == 'dm' %}Nothing logged yet.{% else %}No highlights shared for this session.{% endif %}</p>
+      {% endif %}
+    </section>
+
+    {% if role == 'dm' %}
+    <aside class="ai-panel" id="prep">
+      <div class="ai-tabs" role="tablist">
+        <button type="button" role="tab" class="ai-tab on" data-mode="prep" aria-selected="true">Prep with AI</button>
+        <button type="button" role="tab" class="ai-tab" data-mode="recap" aria-selected="false" id="recap">Recap with AI</button>
+      </div>
+      <p class="muted small ai-help" data-for="prep">Drafts a plan for <strong>{{ s.name }}</strong> from the last sessions' logs and notes, open quests, the adventure book and the party's sheets. Nothing is saved until you click Save.</p>
+      <p class="muted small ai-help" data-for="recap" hidden>Drafts the read-aloud recap from this session's <strong>revealed</strong> log entries only — so it can't leak secrets.</p>
+      <div class="ai-controls">
+        <button type="button" class="btn primary" id="ai-run">Draft session plan</button>
+        <label class="check" data-for="prep" title="Reasons first: better plans, ~1–2 minutes"><input type="checkbox" id="ai-careful"> Careful</label>
+      </div>
+      <div class="ai-status muted small" id="ai-status" hidden></div>
+      <div class="ai-output md" id="ai-output" hidden></div>
+      <div class="ai-sources" id="ai-sources"></div>
+      <form method="post" action="/sessions/{{ s.id }}/save-draft" class="ai-save" id="ai-save" hidden>
+        <input type="hidden" name="target" id="ai-target" value="dm_text">
+        <textarea name="text" id="ai-text" hidden></textarea>
+        <button class="btn primary small" type="submit" name="mode" value="append" id="ai-save-btn">Save to DM notes</button>
+        <button class="btn ghost small" type="submit" name="mode" value="replace">Replace instead</button>
+      </form>
+      {% if s.dm_text %}
+      <details class="dm-notes-box">
+        <summary>DM notes for this session</summary>
+        <div data-md>{{ s.dm_text }}</div>
+      </details>
+      {% endif %}
+    </aside>
+    {% endif %}
+  </div>
+</main>
+<script src="/static/md.js?v={{ asset_v() }}"></script>
+<script>
+  document.querySelectorAll("time[data-ts]").forEach((t) => {
+    const d = new Date(t.dataset.ts);
+    if (!isNaN(d)) t.textContent = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  });
+</script>
+{% if role == 'dm' %}<script>window.SESSION_ID = {{ s.id }};</script><script src="/static/session.js?v={{ asset_v() }}"></script>{% endif %}
+{% endblock %}

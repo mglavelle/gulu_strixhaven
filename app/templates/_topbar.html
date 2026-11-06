@@ -1,0 +1,21 @@
+{% set me = request.state.user if request.state.user is defined else none %}
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 29 10v12L16 29 3 22V10z"/><path d="M16 3v26M3 10l13 7 13-7" class="crest-lines"/></svg>
+    <span>Strixhaven Companion</span>
+  </div>
+  <nav class="tabs" aria-label="Sections">
+    <a href="/" {% if active == 'ask' %}aria-current="page"{% endif %}>Ask</a>
+    <a href="/sessions" {% if active == 'sessions' %}aria-current="page"{% endif %}>Sessions</a>
+    <a href="/notes" {% if active == 'notes' %}aria-current="page"{% endif %}>Notes</a>
+    <a href="/party" {% if active == 'party' %}aria-current="page"{% endif %}>Party</a>
+    {% if role == 'dm' %}<a href="/players" {% if active == 'players' %}aria-current="page"{% endif %}>Players</a>{% endif %}
+  </nav>
+  <div class="topbar-right">
+    <a class="role-badge" href="/account" title="Signed in as {{ me.name if me else '' }} ({{ 'DM' if role == 'dm' else 'player' }}) — account settings">
+      {{ me.name if me and role != 'dm' else ('DM' if role == 'dm' else 'Player') }}
+    </a>
+    {% block topbar_extra %}{% endblock %}
+    <form method="post" action="/logout"><button class="btn ghost small" type="submit">Sign out</button></form>
+  </div>
+</header>

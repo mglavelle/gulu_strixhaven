@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Sessions · Strixhaven Companion{% endblock %}
+{% block body_class %}page role-{{ role }}{% endblock %}
+{% block body %}
+{% set active = 'sessions' %}{% include "_topbar.html" %}
+<main class="content">
+  <div class="page-head">
+    <div>
+      <h1>Sessions</h1>
+      <p class="muted">{% if role == 'dm' %}Prep each session with the AI, log what happens at the table, then draft the recap.
+        {% else %}Recaps and highlights from our sessions.{% endif %}</p>
+    </div>
+    {% if role == 'dm' %}
+    <form method="post" action="/sessions/new"><button class="btn primary" type="submit">Start next session</button></form>
+    {% endif %}
+  </div>
+
+  {% if role == 'dm' %}
+  <section class="status-card" id="status">
+    <div class="status-card-head">
+      <h2>Campaign status</h2>
+      <span class="muted small">{% if status %}updated {{ status.created_at[:10] }}{% else %}not written yet{% endif %}</span>
+      <a class="btn small" href="/status">Catch me up with AI</a>
+    </div>
+    {% if status and (status.where_text or status.next_text) %}
+    <div class="status-cols">
+      <div><h3 class="section-label">Where we are</h3><div data-md>{{ status.where_text or '—' }}</div></div>
+      <div><h3 class="section-label">What's next</h3><div data-md>{{ status.next_text or '—' }}</div></div>
+    </div>
+    {% else %}
+    <p class="muted">Write down where the story stands and where it's going — session prep starts from it.</p>
+    {% endif %}
+    <details class="status-quick-edit" {% if not status %}open{% endif %}>
+      <summary class="linklike">{{ 'Update status' if status else 'Write status' }}</summary>
+      <form method="post" action="/status" class="status-form">
+        <input type="hidden" name="back" value="/sessions">
+        <label class="field"><span>Where we are</span><textarea name="where_text" rows="3">{{ status.where_text if status else '' }}</textarea></label>
+        <label class="field"><span>What's next</span><textarea name="next_text" rows="3">{{ status.next_text if status else '' }}</textarea></label>
+        <div class="form-actions"><button class="btn primary small" type="submit">Save status</button></div>
+      </form>
+    </details>
+  </section>
+  {% endif %}
+
+  {% if sessions %}
+  <ul class="entry-list">
+    {% for s in sessions %}
+    <li class="entry-row">
+      <a class="entry-link" href="/sessions/{{ s.id }}">
+        <span class="entry-name">{{ s.name }}</span>
+        {% if s.session_date %}<span class="muted small">{{ s.session_date }}</span>{% endif %}
+        {% if role == 'dm' %}<span class="muted small">· {{ counts.get(s.id, 0) }} log entr{{ 'y' if counts.get(s.id, 0) == 1 else 'ies' }}</span>{% endif %}
+        <span class="entry-snippet muted">{{ (s.player_text or s.dm_text or '')[:160] if role == 'dm' else s.player_text[:160] }}</span>
+      </a>
+      {% if role == 'dm' %}
+      <span class="reveal {% if s.revealed %}on{% endif %}" title="Visibility to players">{{ 'Revealed' if s.revealed else 'Hidden' }}</span>
+      {% set n = counts.get(s.id, 0) %}
+      <form method="post" action="/sessions/{{ s.id }}/delete" class="row-delete">
+        <button type="submit" class="icon-btn" aria-label="Delete {{ s.name }}" title="Delete session" data-confirm-label="Delete?"
+                data-confirm="Deletes “{{ s.name }}”{{ ' and its ' ~ n ~ ' log entr' ~ ('y' if n == 1 else 'ies') if n else '' }}.">✕</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="empty-state">
+    {% if role == 'dm' %}<p>No sessions yet. "Start next session" creates one dated today.</p>
+    {% else %}<p>The DM hasn't shared any session recaps yet.</p>{% endif %}
+  </div>
+  {% endif %}
+</main>
+<script src="/static/md.js?v={{ asset_v() }}"></script>
+{% endblock %}
