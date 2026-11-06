@@ -23,6 +23,10 @@ EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
 # 6144 keeps qwen3.5 fully on the GPU; 8192 did not. Prompts are trimmed to fit.
 CHAT_CTX = int(os.getenv("CHAT_CTX", "6144"))
 ANSWER_RESERVE = int(os.getenv("ANSWER_RESERVE", "1200"))  # tokens kept free for the answer
+# Force how many model layers go on the GPU (99 = all). Leave unset to let Ollama decide.
+# Needed on Intel Arc + Vulkan: Ollama's "does it fit?" probe misreads free memory there and
+# ends up putting 0 layers on the GPU even with 7 GB free.
+CHAT_NUM_GPU = int(os.getenv("CHAT_NUM_GPU")) if os.getenv("CHAT_NUM_GPU", "").strip() else None
 KEEP_ALIVE = os.getenv("KEEP_ALIVE", "30m")         # keep model loaded between questions
 # Run the small search-embedding model on the CPU (0) so the chat model keeps all the
 # graphics memory. -1 = let Ollama decide (faster bulk ingestion, uses ~350 MB of VRAM).

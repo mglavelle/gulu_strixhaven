@@ -60,7 +60,8 @@ def chat_events(messages: list[dict], model: str | None = None,
             "model": model, "messages": messages, "stream": True, "think": think,
             "keep_alive": config.KEEP_ALIVE,
             # temperature 0: the same question gets the same answer (repeatable, testable)
-            "options": {"num_ctx": config.CHAT_CTX, "temperature": 0},
+            "options": {"num_ctx": config.CHAT_CTX, "temperature": 0,
+                        **({"num_gpu": config.CHAT_NUM_GPU} if config.CHAT_NUM_GPU is not None else {})},
         }) as r:
             r.raise_for_status()
             for line in r.iter_lines():

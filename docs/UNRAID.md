@@ -159,12 +159,13 @@ this, so it should be there.)
    - **Key:** `OLLAMA_VULKAN`
    - **Value:** `1`
    - click **Add**.
-8. Once more:
-   - **Config Type:** `Variable`
-   - **Name:** `Keep model loaded`
-   - **Key:** `OLLAMA_KEEP_ALIVE`
-   - **Value:** `30m`
-   - click **Add**.
+8. Keep the model loaded between questions: the template probably already has an
+   **OLLAMA_KEEP_ALIVE** row (value `5m`) — click its **EDIT** and change the value to
+   `30m`. Only if there is **no** such row, add one:
+   - **Config Type:** `Variable`, **Name:** `Keep model loaded`, **Key:** `OLLAMA_KEEP_ALIVE`,
+     **Value:** `30m` → **Add**.
+
+   Don't end up with two OLLAMA_KEEP_ALIVE rows.
 9. Click **Apply** at the bottom. Unraid downloads the image; when the log window says
    **Command execution completed successfully**, click **Done**.
 
@@ -213,8 +214,20 @@ ollama ps
 ✅ **Check:** `ollama ps` shows **`100% GPU`** in the PROCESSOR column, and the eval rate
 was roughly **20 tokens/s or more**.
 
-If it shows **`100% CPU`** instead, the Arc wasn't used. Everything will still work, just
-3–5× slower. You can carry on and fix it later (see Troubleshooting).
+**On the Intel Arc it will most likely show `100% CPU` or `95%/5% CPU/GPU` at ~5 tokens/s.**
+That's expected: Ollama's "will the model fit?" check misreads the Arc's free memory over
+Vulkan and puts 0 layers on the GPU (its log says `offloaded 0/33 layers to GPU` even with
+7 GB free). Force all layers onto the GPU to confirm the card itself works:
+
+1. In the Ollama console run `ollama run qwen3.5:latest --think=false --verbose`
+2. At the `>>>` prompt type `/set parameter num_gpu 99` and press Enter.
+3. Type `Say hello to my D&D group.` and press Enter — note the **eval rate**.
+4. Type `/bye`, then run `ollama ps`.
+
+✅ **Check:** now **`100% GPU`** and roughly **20–40 tokens/s**. The Companion does the same
+thing automatically through its **GPU layers = 99** setting (Part 4).
+
+If it's still on the CPU, Vulkan isn't on — see Troubleshooting ("`ollama ps` says CPU").
 
 ---
 
@@ -258,6 +271,7 @@ It prints a 64-character string like `3f9a…c21e`. Select it with the mouse and
    | Web UI port | `8765` |
    | Data | `/mnt/user/appdata/strixhaven-companion` |
    | Ollama URL | `http://192.168.1.230:11434` |
+   | GPU layers | `99` (puts the whole model on the Arc — see Part 3d) |
 
 5. Toggle **Advanced View** (top right) and check **Extra Parameters** is
    **`--user 99:100`**. (This makes the app run as `nobody`, matching Part 2c.)
@@ -421,7 +435,8 @@ group has written. If you use the *Appdata Backup* plugin, it's included automat
 | Login page says no logins exist | `companion.db` isn't in `/mnt/user/appdata/strixhaven-companion/` directly (maybe inside a `server-upload` subfolder). Move it up one level, redo 2c, restart the container. |
 | Answers never start / "Ollama not reachable" | **Ollama URL** must be `http://192.168.1.230:11434` (not `localhost`). Check http://192.168.1.230:11434 says "Ollama is running". |
 | Error mentions `model "qwen3.5:latest" not found` | Redo Part 3c. |
-| `ollama ps` says CPU | Check Part 3a shows `renderD128`; check the ollama container has the **Device** `/dev/dri` and `OLLAMA_VULKAN=1`; **Docker** tab → ollama → **Force update** to get the newest Ollama. Still CPU? Ask Claude to set up Intel's IPEX-LLM build of Ollama instead. |
+| `ollama ps` says CPU | 1) In the Unraid terminal run `docker exec ollama env \| grep -i vulkan` — it must print `OLLAMA_VULKAN=1` (retype the key/value in the container's settings if not). 2) `docker logs ollama 2>&1 \| grep -i "inference compute"` must mention the Arc A580; if it says `library=cpu`, Vulkan is off. 3) If the log shows the Arc but `offloaded 0/33 layers`, that's the fit-check problem: use **GPU layers = 99** (Part 3d / Part 4). Still CPU? Ask Claude to set up Intel's IPEX-LLM build of Ollama instead. |
+| Answers stop with an out-of-memory error after setting GPU layers 99 | Lower **Context size** to `4096`, or set **GPU layers** to `30`. |
 | Answers are slow or pause mid-answer | Run `ollama ps` while it answers — it should say 100% GPU. A Jellyfin transcode running at the same time shares the GPU. |
 | Phone shows Cloudflare error **521/522** | SWAG isn't reachable from the internet — but `watch` works, so most likely SWAG didn't restart cleanly: redo Part 7 steps 4–5. |
 | **502 Bad Gateway** (nginx page) | The Companion isn't answering on `192.168.1.230:8765`: is it started? Does http://192.168.1.230:8765 work at home? |
