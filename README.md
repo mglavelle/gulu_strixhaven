@@ -174,13 +174,16 @@ docker compose exec ollama ollama pull nomic-embed-text
 docker compose exec companion python -m ingest.pdf_ingest
 ```
 
-**Unraid** (Docker → Add Container):
+**Unraid:** full step-by-step guide (data move, Ollama on the Arc, SWAG, Cloudflare,
+security) in [docs/UNRAID.md](docs/UNRAID.md), with a ready-made Unraid template and SWAG
+config in [docs/unraid/](docs/unraid/). Quick reference (Docker → Add Container):
 
 | Field | Value |
 |---|---|
 | Repository | `ghcr.io/mglavelle/gulu_strixhaven:latest` |
 | Port | container `8000` → host port of your choice |
 | Path | container `/data` → `/mnt/user/appdata/strixhaven-companion` |
+| Extra Parameters | `--user 99:100` (so it can write to appdata) |
 | Variables | `DM_PASSWORD`, `SESSION_SECRET` (long random string), `OLLAMA_URL` (e.g. `http://<server-ip>:11434`), optionally `CHAT_MODEL`, `CHAT_CTX` |
 
 The appdata folder needs `sources/` with the PDFs; run the ingest once from the

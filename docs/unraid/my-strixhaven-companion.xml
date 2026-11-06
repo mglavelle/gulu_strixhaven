@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+  Unraid Docker template for the Strixhaven Companion.
+  Copy to /boot/config/plugins/dockerMan/templates-user/ on the server, then
+  Docker -> Add Container -> Template: strixhaven-companion.
+-->
+<Container version="2">
+  <Name>strixhaven-companion</Name>
+  <Repository>ghcr.io/mglavelle/gulu_strixhaven:latest</Repository>
+  <Registry>https://github.com/mglavelle/gulu_strixhaven/pkgs/container/gulu_strixhaven</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/mglavelle/gulu_strixhaven</Support>
+  <Project>https://github.com/mglavelle/gulu_strixhaven</Project>
+  <Overview>Local AI companion for our Strixhaven D&amp;D campaign: rules and adventure Q&amp;A with citations, session tracker, campaign notes, per-player notes and D&amp;D Beyond party import. Needs an Ollama server.</Overview>
+  <Category>Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8000]/</WebUI>
+  <ExtraParams>--user 99:100</ExtraParams>
+  <Config Name="Web UI port" Target="8000" Default="8765" Mode="tcp" Description="Host port for the web app (SWAG proxies to this)." Type="Port" Display="always" Required="true" Mask="false">8765</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/strixhaven-companion" Mode="rw" Description="Books (sources/), companion.db and extracted text. Must be owned by nobody:users." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/strixhaven-companion</Config>
+  <Config Name="DM password" Target="DM_PASSWORD" Default="" Mode="" Description="Password for the DM login." Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="Session secret" Target="SESSION_SECRET" Default="" Mode="" Description="Long random string (openssl rand -hex 32). Keep it the same or everyone is logged out." Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="Ollama URL" Target="OLLAMA_URL" Default="http://192.168.1.230:11434" Mode="" Description="Address of the Ollama container (use the server's LAN IP, not localhost)." Type="Variable" Display="always" Required="true" Mask="false">http://192.168.1.230:11434</Config>
+  <Config Name="Chat model" Target="CHAT_MODEL" Default="qwen3.5:latest" Mode="" Description="Ollama model that writes answers." Type="Variable" Display="advanced" Required="false" Mask="false">qwen3.5:latest</Config>
+  <Config Name="Embedding model" Target="EMBED_MODEL" Default="nomic-embed-text" Mode="" Description="Must match the model the search index was built with." Type="Variable" Display="advanced" Required="false" Mask="false">nomic-embed-text</Config>
+  <Config Name="Context size" Target="CHAT_CTX" Default="6144" Mode="" Description="Tokens of context. Raise to 8192 only if answers stay fast (model must fit in GPU memory)." Type="Variable" Display="advanced" Required="false" Mask="false">6144</Config>
+</Container>
