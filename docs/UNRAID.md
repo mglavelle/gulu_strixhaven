@@ -195,10 +195,16 @@ browser, open http://192.168.1.230:11434 — the page says **Ollama is running**
 Still in the Ollama console:
 
 ```bash
-ollama run qwen3.5:latest "Say hi in five words." --verbose
+ollama run qwen3.5:latest "Say hello to my D&D group." --think=false --verbose
 ```
 
-It answers, then prints stats. Look for the line **`eval rate:`**. Then run:
+It answers in a sentence or two, then prints stats. Look for the line **`eval rate:`**.
+
+> Leave `--think=false` in. Without it, this model "thinks out loud" first and can ramble
+> for minutes (press **Ctrl+C** to stop it). The Companion app already turns thinking off
+> except when you tick **Careful**.
+
+Then run:
 
 ```bash
 ollama ps
