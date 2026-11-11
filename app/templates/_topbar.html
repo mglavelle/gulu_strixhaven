@@ -10,6 +10,7 @@
     <a href="/notes" {% if active == 'notes' %}aria-current="page"{% endif %}>Notes</a>
     <a href="/party" {% if active == 'party' %}aria-current="page"{% endif %}>Party</a>
     {% if role == 'dm' %}<a href="/players" {% if active == 'players' %}aria-current="page"{% endif %}>Players</a>{% endif %}
+    {% if me and me.is_admin %}<a href="/usage" {% if active == 'usage' %}aria-current="page"{% endif %}>Usage</a>{% endif %}
   </nav>
   <div class="topbar-right">
     <a class="role-badge" href="/account" title="Signed in as {{ me.name if me else '' }} ({{ 'DM' if role == 'dm' else 'player' }}) — account settings">

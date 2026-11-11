@@ -87,6 +87,24 @@ player's answer that used their private notes stays in their own list. You can d
 own entries (✕, click twice); the DM can remove any shared one. Each person keeps their
 latest 150.
 
+## Usage page (admin)
+
+Logins listed in `ADMIN_USERS` (e.g. `ADMIN_USERS=Aldric`) get a **Usage** tab. The DM is
+not an admin unless listed. It shows:
+
+- **Summary** — people active this week, questions, average answer time, 👍/👎, failed
+  answers and failed sign-ins.
+- **People** — last active, last sign-in, days active and sign-ins (30 days), questions
+  (7 / 30 days / all time), 👍/👎.
+- **Questions** — everyone's questions with the full answer, time taken, Careful, sources
+  and feedback; filter by person, 👎 only, or include stopped/failed answers. The DM's
+  questions are hidden unless you tick *Show DM questions* (adventure spoilers).
+- **Recent sign-ins** — time, person, IP address and device, including failed attempts.
+
+People rate answers with 👍/👎 under each answer. Removing a question from *Recent* hides
+it there but keeps it in the usage log. The login page tells everyone that sign-ins and
+questions are visible to the site admin.
+
 ## Logins
 
 The login page has one password box; the password decides who you are.

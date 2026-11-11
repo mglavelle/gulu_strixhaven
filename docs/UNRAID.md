@@ -272,6 +272,7 @@ It prints a 64-character string like `3f9a…c21e`. Select it with the mouse and
    | Data | `/mnt/user/appdata/strixhaven-companion` |
    | Ollama URL | `http://192.168.1.230:11434` |
    | GPU layers | `99` (puts the whole model on the Arc — see Part 3d) |
+   | Admin logins | `Aldric` (who can open the Usage page; the DM isn't admin unless listed) |
 
 5. Toggle **Advanced View** (top right) and check **Extra Parameters** is
    **`--user 99:100`**. (This makes the app run as `nobody`, matching Part 2c.)

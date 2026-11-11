@@ -121,6 +121,23 @@ CREATE TABLE IF NOT EXISTS ask_history (
 CREATE INDEX IF NOT EXISTS ask_history_user ON ask_history(user_id, id);
 CREATE INDEX IF NOT EXISTS ask_history_shared ON ask_history(shared, id);
 
+-- Admin usage tracking.
+CREATE TABLE IF NOT EXISTS login_events (
+    id          INTEGER PRIMARY KEY,
+    user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,   -- NULL = failed attempt
+    ok          INTEGER NOT NULL,
+    ip          TEXT NOT NULL DEFAULT '',
+    user_agent  TEXT NOT NULL DEFAULT '',
+    at          TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS login_events_at ON login_events(at);
+CREATE TABLE IF NOT EXISTS activity_days (
+    user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    day      TEXT NOT NULL,              -- YYYY-MM-DD (UTC)
+    hits     INTEGER NOT NULL DEFAULT 0, -- 5-minute windows with activity
+    PRIMARY KEY (user_id, day)
+);
+
 CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -133,6 +150,13 @@ MIGRATIONS = [
     ("chunks", "ref_id", "INTEGER"),
     ("entries", "owner_id", "INTEGER"),            # NULL = campaign note; else a player's own note
     ("entries", "shared_with_dm", "INTEGER NOT NULL DEFAULT 0"),
+    ("users", "last_seen", "TEXT"),
+    ("ask_history", "hidden", "INTEGER NOT NULL DEFAULT 0"),      # removed from Recent by its owner
+    ("ask_history", "status", "TEXT NOT NULL DEFAULT 'ok'"),      # ok | stopped | error
+    ("ask_history", "total_s", "REAL"),
+    ("ask_history", "careful", "INTEGER NOT NULL DEFAULT 0"),
+    ("ask_history", "feedback", "INTEGER"),                       # 1 = 👍, -1 = 👎
+    ("ask_history", "error", "TEXT"),
 ]
 
 

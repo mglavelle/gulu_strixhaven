@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Usage · Strixhaven Companion{% endblock %}
+{% block body_class %}page role-{{ role }}{% endblock %}
+{% block body %}
+{% set active = 'usage' %}{% include "_topbar.html" %}
+{% macro when(ts) %}{% if ts %}<time data-ts="{{ ts }}">{{ ts[:16].replace('T', ' ') }}</time>{% else %}<span class="muted">never</span>{% endif %}{% endmacro %}
+<main class="content wide">
+  <div class="page-head">
+    <div>
+      <h1>Usage</h1>
+      <p class="muted">Who's using the Companion and what they ask — for spotting gaps and bad answers. Admin only.</p>
+    </div>
+  </div>
+
+  <section class="stat-row" aria-label="Summary">
+    <div class="stat"><span class="stat-num">{{ cards.active7 }}<span class="stat-of">/{{ cards.people }}</span></span><span class="stat-label">people active, last 7 days</span></div>
+    <div class="stat"><span class="stat-num">{{ cards.questions7 }}</span><span class="stat-label">question{{ '' if cards.questions7 == 1 else 's' }}, last 7 days</span></div>
+    <div class="stat"><span class="stat-num">{{ '%.0f' % cards.avg7 ~ 's' if cards.avg7 else '—' }}</span><span class="stat-label">average answer time, 7 days</span></div>
+    <div class="stat"><span class="stat-num">👍 {{ cards.up30 }} · 👎 {{ cards.down30 }}</span><span class="stat-label">feedback, last 30 days</span></div>
+    <div class="stat {% if cards.errors7 %}warn{% endif %}"><span class="stat-num">{{ cards.errors7 }}</span><span class="stat-label">failed answers, 7 days</span></div>
+    <div class="stat {% if cards.failed_logins7 %}warn{% endif %}"><span class="stat-num">{{ cards.failed_logins7 }}</span><span class="stat-label">failed sign-ins, 7 days</span></div>
+  </section>
+
+  <h2 class="usage-h">People</h2>
+  <div class="table-wrap">
+    <table class="usage-table">
+      <thead><tr>
+        <th>Login</th><th>Character</th><th>Last active</th><th>Last sign-in</th>
+        <th class="num" title="Days with any activity in the last 30 days">Days active (30d)</th>
+        <th class="num">Sign-ins (30d)</th><th class="num">Questions 7d / 30d / all</th><th class="num">👍 / 👎</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for p in people %}
+        <tr>
+          <td><strong>{{ p.name }}</strong>{% if p.role == 'dm' %} <span class="tag-dm">DM</span>{% endif %}</td>
+          <td>{{ p.character or '—' }}</td>
+          <td>{{ when(p.last_seen) }}</td>
+          <td>{{ when(p.last_login) }}</td>
+          <td class="num">{{ p.days30 }}</td>
+          <td class="num">{{ p.logins30 }}</td>
+          <td class="num">{{ p.q7 }} / {{ p.q30 }} / {{ p.qall }}</td>
+          <td class="num">{{ p.up }} / {{ p.down }}</td>
+          <td><a href="/usage?person={{ p.id }}{{ '&dm=1' if p.role == 'dm' }}#questions">questions →</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="usage-h">Questions per day <span class="muted small">(last 14 days)</span></h2>
+  <div class="table-wrap">
+    <table class="usage-table per-day">
+      <tr>{% for d in days %}<th>{{ d[5:] }}</th>{% endfor %}</tr>
+      <tr>{% for d in days %}<td class="num {% if per_day.get(d) %}has{% endif %}">{{ per_day.get(d, 0) }}</td>{% endfor %}</tr>
+    </table>
+  </div>
+
+  <h2 class="usage-h" id="questions">Questions</h2>
+  <form method="get" action="/usage#questions" class="usage-filters">
+    <label class="field"><span>Person</span>
+      <select name="person" onchange="this.form.submit()">
+        <option value="">Everyone</option>
+        {% for p in people %}<option value="{{ p.id }}" {% if f.person == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" name="bad" value="1" {% if f.bad %}checked{% endif %} onchange="this.form.submit()"> 👎 only</label>
+    <label class="check"><input type="checkbox" name="failed" value="1" {% if f.failed %}checked{% endif %} onchange="this.form.submit()"> Include stopped / failed</label>
+    <label class="check" title="The DM's questions can contain adventure spoilers">
+      <input type="checkbox" name="dm" value="1" {% if f.dm %}checked{% endif %} onchange="this.form.submit()"> Show DM questions <span class="muted">(spoilers)</span></label>
+    <noscript><button class="btn small" type="submit">Filter</button></noscript>
+  </form>
+  {% if hidden_dm %}<p class="muted small">{{ hidden_dm }} DM question{{ '' if hidden_dm == 1 else 's' }} hidden — tick "Show DM questions" to see {{ 'it' if hidden_dm == 1 else 'them' }}.</p>{% endif %}
+
+  {% if questions %}
+  <ul class="q-log">
+    {% for q in questions %}
+    <li class="q-row {% if q.feedback == -1 %}bad{% endif %} {% if q.status != 'ok' %}failed{% endif %}">
+      <details>
+        <summary>
+          <span class="q-text">{{ q.question }}</span>
+          <span class="q-meta">
+            <strong>{{ q.asker }}</strong> · {{ when(q.created_at) }}
+            {% if q.total_s %} · {{ '%.0f' % q.total_s }}s{% endif %}
+            {% if q.careful %} · Careful{% endif %}
+            {% if q.scope and q.scope != 'all' %} · {{ q.scope }}{% endif %}
+            {% if q.feedback == 1 %} · 👍{% elif q.feedback == -1 %} · 👎{% endif %}
+            {% if q.status == 'stopped' %} · <span class="tag">stopped</span>{% elif q.status == 'error' %} · <span class="tag err">failed</span>{% endif %}
+            {% if q.hidden %} · <span class="tag">removed from Recent</span>{% endif %}
+            {% if not q.shared and q.role != 'dm' and q.status == 'ok' %} · <span class="tag" title="Used their private notes, so not shared with the group">private</span>{% endif %}
+          </span>
+        </summary>
+        <div class="q-answer">
+          {% if q.error %}<p class="msg-error small">Error: {{ q.error }}</p>{% endif %}
+          {% if q.answer %}<div data-md>{{ q.answer }}</div>{% else %}<p class="muted">No answer text.</p>{% endif %}
+          {% if q.sources %}<p class="muted small">Sources: {{ q.sources|join(' · ') }}</p>{% endif %}
+        </div>
+      </details>
+    </li>
+    {% endfor %}
+  </ul>
+  {% if questions|length == 200 %}<p class="muted small">Showing the latest 200 — filter by person to see more.</p>{% endif %}
+  {% else %}
+  <div class="empty-state"><p>No questions match.</p></div>
+  {% endif %}
+
+  <h2 class="usage-h">Recent sign-ins</h2>
+  <div class="table-wrap">
+    <table class="usage-table">
+      <thead><tr><th>When</th><th>Who</th><th>IP address</th><th>Device</th></tr></thead>
+      <tbody>
+      {% for l in logins %}
+        <tr class="{% if not l.ok %}failed{% endif %}">
+          <td>{{ when(l.at) }}</td>
+          <td>{% if l.ok %}{{ l.name or '(removed user)' }}{% else %}<span class="tag err">failed attempt</span>{% endif %}</td>
+          <td>{{ l.ip or '—' }}</td>
+          <td>{{ l.device }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="muted">No sign-ins recorded yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted small">Tracking started when this feature was installed; earlier activity isn't included.</p>
+</main>
+<script src="/static/md.js?v={{ asset_v() }}"></script>
+<script>
+  // Show times in the viewer's local time.
+  document.querySelectorAll("time[data-ts]").forEach((t) => {
+    const d = new Date(t.dataset.ts);
+    if (!isNaN(d)) t.textContent = d.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  });
+  // Render answers only when opened (keeps the page light).
+  document.querySelectorAll(".q-log details").forEach((d) => d.addEventListener("toggle", () => {
+    if (d.open) window.MD.renderAll(d);
+  }, { once: true }));
+</script>
+{% endblock %}

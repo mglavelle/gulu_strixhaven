@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import accounts, answer, auth, config, db, history, notes, party, sessions, status, users
+from . import accounts, answer, auth, config, db, history, notes, party, sessions, status, usage, users
 from .web import LoginRequired, page_user, templates
 
 HERE = Path(__file__).resolve().parent
@@ -20,12 +20,22 @@ app.include_router(party.router)
 app.include_router(accounts.router)
 app.include_router(status.router)
 app.include_router(history.router)
+app.include_router(usage.router)
 users.ensure_dm(db.connect())          # DM account follows DM_PASSWORD in .env
 
 
 @app.exception_handler(LoginRequired)
 def _to_login(request: Request, exc: LoginRequired):
     return RedirectResponse("/login", status_code=303)
+
+
+# Defined before SessionMiddleware is added, so it runs inside it (the session is available).
+@app.middleware("http")
+async def _track_activity(request: Request, call_next):
+    uid = request.session.get("uid") if "session" in request.scope else None
+    if isinstance(uid, int) and not request.url.path.startswith(("/static", "/health", "/favicon")):
+        usage.touch(uid)
+    return await call_next(request)
 
 
 app.add_middleware(
@@ -58,6 +68,7 @@ def login_page(request: Request):
 @app.post("/login", response_class=HTMLResponse)
 def login(request: Request, password: str = Form(...)):
     user = auth.check_password(password)
+    usage.log_login(request, user.id if user else None, bool(user))
     if not user:
         return templates.TemplateResponse(request, "login.html", {
             "error": "That password didn't work.",
@@ -94,7 +105,7 @@ def ask(req: AskRequest, user: auth.User = Depends(auth.require_user)):
     stream = answer.answer_stream(
         req.question.strip(), role=user.role, kinds=kinds, user=user,
         history=[t.model_dump() for t in req.history], think=req.careful)
-    stream = history.record(stream, user, req.question, req.scope)   # saved for the Recent panel
+    stream = history.record(stream, user, req.question, req.scope, careful=req.careful)  # Recent + usage log
     return StreamingResponse(stream, media_type="application/x-ndjson",
                              headers={"Cache-Control": "no-cache",
                                       "X-Accel-Buffering": "no"})  # nginx/SWAG: don't buffer

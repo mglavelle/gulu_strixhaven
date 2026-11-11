@@ -75,6 +75,30 @@
       `<details class="sources"><summary>Sources (${sources.length})</summary><ul class="source-list">${items}</ul></details>`;
   }
 
+  // 👍 / 👎 on your own answers - shown to the admin on the Usage page.
+  function addFeedback(el, id, current) {
+    const box = document.createElement("span");
+    box.className = "feedback";
+    box.innerHTML = `<span class="muted">Helpful?</span>
+      <button type="button" class="fb" data-v="1" aria-label="Helpful" title="Helpful">👍</button>
+      <button type="button" class="fb" data-v="-1" aria-label="Not helpful" title="Not helpful — wrong or unclear">👎</button>`;
+    const paint = (v) => box.querySelectorAll(".fb").forEach((b) => {
+      b.classList.toggle("on", +b.dataset.v === v); b.setAttribute("aria-pressed", +b.dataset.v === v);
+    });
+    paint(current);
+    box.addEventListener("click", async (e) => {
+      const b = e.target.closest(".fb");
+      if (!b) return;
+      const v = b.classList.contains("on") ? 0 : +b.dataset.v;   // click again to clear
+      paint(v || null);
+      try {
+        await fetch(`/api/history/${id}/feedback`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ value: v }) });
+      } catch { /* best effort */ }
+    });
+    el.querySelector(".meta").appendChild(box);
+  }
+
   const atBottom = () => thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
   const scrollDown = () => { thread.scrollTop = thread.scrollHeight; };
 
@@ -146,6 +170,8 @@
             out.innerHTML = md(text, true);
           } else if (ev.type === "done") {
             meta.textContent = `${ev.model} · ${ev.total_s}s`;
+          } else if (ev.type === "saved") {
+            addFeedback(el, ev.id, null);
           } else if (ev.type === "error") {
             throw new Error(ev.message);
           }
@@ -264,6 +290,7 @@
     meta.innerHTML = `Saved answer · ${h.mine ? "you" : esc(h.asker)} asked ${esc(when(h.created_at))}
       <button type="button" class="linklike ask-again">Ask again for a fresh answer</button>`;
     meta.querySelector(".ask-again").addEventListener("click", () => { if (!controller) ask(h.question); });
+    if (h.mine) addFeedback(el, h.id, h.feedback);
     history.push({ role: "user", content: h.question }, { role: "assistant", content: h.answer });
     scrollDown();
     if (window.innerWidth < 1100) setRecentOpen(false);

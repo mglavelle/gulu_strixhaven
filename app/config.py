@@ -33,6 +33,10 @@ KEEP_ALIVE = os.getenv("KEEP_ALIVE", "30m")         # keep model loaded between 
 EMBED_NUM_GPU = int(os.getenv("EMBED_NUM_GPU", "0"))
 THINK = os.getenv("THINK", "false").lower() in ("1", "true", "yes")  # reason before answering
 
+# Who may open the admin Usage page: only these login names (comma separated), e.g. "Aldric".
+# The DM is NOT an admin unless listed here.
+ADMIN_USERS = {n.strip().lower() for n in os.getenv("ADMIN_USERS", "").split(",") if n.strip()}
+
 DM_PASSWORD = os.getenv("DM_PASSWORD", "")
 PLAYER_PASSWORD = os.getenv("PLAYER_PASSWORD", "")
 SESSION_SECRET = os.getenv("SESSION_SECRET", "")

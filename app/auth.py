@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from fastapi import HTTPException, Request
 
-from . import db, users
+from . import config, db, users
 
 
 @dataclass
@@ -22,6 +22,11 @@ class User:
     @property
     def is_dm(self) -> bool:
         return self.role == "dm"
+
+    @property
+    def is_admin(self) -> bool:
+        """May open the Usage page: only the logins listed in ADMIN_USERS (not the DM)."""
+        return self.name.lower() in config.ADMIN_USERS
 
 
 def any_logins(conn=None) -> bool:
