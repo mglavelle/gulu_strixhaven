@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import accounts, answer, auth, config, db, notes, party, sessions, status, users
+from . import accounts, answer, auth, config, db, history, notes, party, sessions, status, users
 from .web import LoginRequired, page_user, templates
 
 HERE = Path(__file__).resolve().parent
@@ -19,6 +19,7 @@ app.include_router(sessions.router)
 app.include_router(party.router)
 app.include_router(accounts.router)
 app.include_router(status.router)
+app.include_router(history.router)
 users.ensure_dm(db.connect())          # DM account follows DM_PASSWORD in .env
 
 
@@ -93,6 +94,7 @@ def ask(req: AskRequest, user: auth.User = Depends(auth.require_user)):
     stream = answer.answer_stream(
         req.question.strip(), role=user.role, kinds=kinds, user=user,
         history=[t.model_dump() for t in req.history], think=req.careful)
+    stream = history.record(stream, user, req.question, req.scope)   # saved for the Recent panel
     return StreamingResponse(stream, media_type="application/x-ndjson",
                              headers={"Cache-Control": "no-cache",
                                       "X-Accel-Buffering": "no"})  # nginx/SWAG: don't buffer

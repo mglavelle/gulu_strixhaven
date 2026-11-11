@@ -153,6 +153,7 @@
         }
       }
       history.push({ role: "user", content: question }, { role: "assistant", content: text });
+      refreshRecent();                       // the server saved it; show it under Recent
     } catch (err) {
       status.hidden = false;
       status.innerHTML = err.name === "AbortError"
@@ -200,5 +201,131 @@
     location.reload();
   });
 
+  // ---------------------------------------------------------------- recent questions
+  const recent = $("recent"), recentList = $("recent-list"), recentFilter = $("recent-filter");
+  const lists = { mine: [], group: [] };
+  let view = "mine";
+
+  const when = (iso) => {
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    const days = Math.floor((Date.now() - d) / 86400000);
+    return days < 1 ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+      : days < 7 ? d.toLocaleDateString([], { weekday: "short" }) : d.toLocaleDateString();
+  };
+
+  function renderRecent() {
+    const words = recentFilter.value.toLowerCase().split(/\s+/).filter(Boolean);
+    const items = lists[view].filter((h) => words.every((w) => (h.question + " " + h.snippet).toLowerCase().includes(w)));
+    recentList.innerHTML = items.length ? items.map((h) => `
+      <li class="recent-item" data-id="${h.id}">
+        <button type="button" class="recent-open" data-id="${h.id}">
+          <span class="recent-q">${esc(h.question)}</span>
+          <span class="recent-meta">${view === "group" ? esc(h.mine ? "You" : h.asker) + " · " : ""}${when(h.created_at)}</span>
+        </button>
+        ${h.can_delete ? `<button type="button" class="icon-btn recent-del" data-id="${h.id}" aria-label="Delete this saved answer"
+             data-confirm="Delete this saved answer?" data-confirm-label="Delete?">✕</button>` : ""}
+      </li>`).join("")
+      : `<li class="muted small recent-empty">${recentFilter.value ? "No matches." :
+          view === "mine" ? "Your questions will appear here." : "Nothing shared yet."}</li>`;
+  }
+
+  async function refreshRecent() {
+    try {
+      const [mine, group] = await Promise.all(["mine", "group"].map((v) =>
+        fetch(`/api/history?view=${v}`).then((r) => (r.ok ? r.json() : []))));
+      lists.mine = mine; lists.group = group;
+      renderRecent();
+    } catch { /* offline: keep what we have */ }
+  }
+
+  document.querySelectorAll(".recent-tab").forEach((t) => t.addEventListener("click", () => {
+    view = t.dataset.view;
+    document.querySelectorAll(".recent-tab").forEach((b) => {
+      b.classList.toggle("on", b === t); b.setAttribute("aria-selected", b === t);
+    });
+    renderRecent();
+  }));
+  recentFilter.addEventListener("input", renderRecent);
+
+  // Show a saved answer in the conversation, exactly as it was answered.
+  async function openSaved(id) {
+    const res = await fetch(`/api/history/${id}`);
+    if (!res.ok) { refreshRecent(); return; }
+    const h = await res.json();
+    $("empty")?.remove();
+    addUser(h.question);
+    const el = addBot();
+    el.classList.add("saved");
+    el.querySelector(".status").hidden = true;
+    el.querySelector(".answer").innerHTML = md(h.answer, true);
+    renderSources(el, h.sources);
+    const meta = el.querySelector(".meta");
+    meta.innerHTML = `Saved answer · ${h.mine ? "you" : esc(h.asker)} asked ${esc(when(h.created_at))}
+      <button type="button" class="linklike ask-again">Ask again for a fresh answer</button>`;
+    meta.querySelector(".ask-again").addEventListener("click", () => { if (!controller) ask(h.question); });
+    history.push({ role: "user", content: h.question }, { role: "assistant", content: h.answer });
+    scrollDown();
+    if (window.innerWidth < 1100) setRecentOpen(false);
+  }
+
+  recentList.addEventListener("click", async (e) => {
+    const del = e.target.closest(".recent-del");
+    if (del) {
+      if (e.defaultPrevented) return;          // first click: ui.js only armed it ("Delete?")
+      await fetch(`/api/history/${del.dataset.id}`, { method: "DELETE" });
+      refreshRecent();
+      return;
+    }
+    const open = e.target.closest(".recent-open");
+    if (open) openSaved(open.dataset.id);
+  });
+
+  // Panel open/closed: open by default on wide screens, remembered per browser.
+  function setRecentOpen(open) {
+    recent.classList.toggle("open", open);
+    $("recent-toggle").setAttribute("aria-expanded", open);
+    store.set("recentOpen", open ? "1" : "0");
+  }
+  const saved = store.get("recentOpen");
+  setRecentOpen(saved ? saved === "1" : window.innerWidth >= 1100);
+  $("recent-toggle").addEventListener("click", () => setRecentOpen(!recent.classList.contains("open")));
+  $("recent-close").addEventListener("click", () => setRecentOpen(false));
+
+  // ---------------------------------------------------------------- "asked before" suggestions
+  const STOP = new Set("what when where which while with from that this does have your about there their they them then than into make many much some such will would could should can how who why the and for are was were been being does did not but you our out get got".split(" "));
+  const keywords = (s) => new Set(s.toLowerCase().match(/[a-z0-9']+/g)?.filter((w) => w.length > 2 && !STOP.has(w)) || []);
+  const suggestBox = $("suggest");
+  let suggestTimer = null;
+
+  function suggest() {
+    const typed = keywords(input.value);
+    if (typed.size < 2 || controller) { suggestBox.hidden = true; return; }
+    const seen = new Set(), scored = [];
+    for (const h of [...lists.mine, ...lists.group]) {
+      const k = h.question.toLowerCase().trim();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const qw = keywords(h.question);
+      let hits = 0; typed.forEach((w) => { if (qw.has(w)) hits++; });
+      const score = hits / Math.max(typed.size, qw.size);
+      if (hits >= 2 && score >= 0.4) scored.push({ h, score });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    const top = scored.slice(0, 3);
+    suggestBox.hidden = !top.length;
+    suggestBox.innerHTML = top.length ? `<span class="muted small">Asked before:</span>` + top.map(({ h }) =>
+      `<button type="button" class="suggest-item" data-id="${h.id}" title="Open the saved answer">${esc(h.question)}</button>`).join("") : "";
+  }
+  input.addEventListener("input", () => { clearTimeout(suggestTimer); suggestTimer = setTimeout(suggest, 250); });
+  suggestBox.addEventListener("click", (e) => {
+    const b = e.target.closest(".suggest-item");
+    if (!b) return;
+    input.value = ""; autosize(); suggestBox.hidden = true;
+    openSaved(b.dataset.id);
+  });
+  form.addEventListener("submit", () => { suggestBox.hidden = true; });
+
+  refreshRecent();
   input.focus();
 })();

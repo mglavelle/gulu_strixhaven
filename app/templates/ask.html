@@ -4,6 +4,24 @@
 {% set active = 'ask' %}{% include "_topbar.html" %}
 
 <div class="layout">
+  <aside id="recent" class="recent" aria-label="Recent questions">
+    <div class="recent-head">
+      <h2>Recent</h2>
+      <button type="button" class="btn ghost small" id="recent-close" aria-label="Close recent questions">✕</button>
+    </div>
+    <div class="recent-tabs" role="tablist">
+      <button type="button" role="tab" class="recent-tab on" data-view="mine" aria-selected="true">Mine</button>
+      <button type="button" role="tab" class="recent-tab" data-view="group" aria-selected="false"
+              title="{{ 'Questions players asked (yours stay private)' if role == 'dm' else 'Questions anyone in the group asked' }}">Group</button>
+    </div>
+    <input type="search" id="recent-filter" class="recent-filter" placeholder="Filter…" aria-label="Filter recent questions">
+    <ul id="recent-list" class="recent-list"></ul>
+    <p class="muted small recent-note">
+      {% if role == 'dm' %}Your questions stay private to you (they may involve the adventure).
+      {% else %}Your questions also appear under Group — except answers that used your private notes.{% endif %}
+    </p>
+  </aside>
+
   <main class="thread-wrap">
     <section id="thread" class="thread" aria-live="polite">
       <div class="empty" id="empty">
@@ -23,6 +41,7 @@
     </section>
 
     <form id="ask-form" class="composer" autocomplete="off">
+      <div id="suggest" class="suggest" hidden aria-live="polite"></div>
       <textarea id="question" rows="1" placeholder="Ask a question…" aria-label="Question" maxlength="2000" required></textarea>
       <div class="composer-row">
         <div class="composer-options">
@@ -38,6 +57,7 @@
           </label>
           {% endif %}
           <button type="button" class="btn ghost small" id="new-chat" title="Start a new conversation">New chat</button>
+          <button type="button" class="btn ghost small" id="recent-toggle" aria-controls="recent" aria-expanded="false">Recent</button>
           <label class="check" title="Reasons before answering. Better with calculations, but takes ~30–60 seconds.">
             <input type="checkbox" id="careful"> Careful <span class="muted">(slower)</span>
           </label>

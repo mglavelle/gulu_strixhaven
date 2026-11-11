@@ -71,6 +71,22 @@ To let others on your home network use it while it runs on this PC, start it wit
 `--host 0.0.0.0` and browse to `http://<this PC's IP>:8000` (allow it through Windows
 Firewall when asked). Internet access via SWAG comes with the Unraid move (M5).
 
+## Recent questions
+
+Every finished answer is saved. The **Recent** panel on the Ask page (left side on wide
+screens; the **Recent** button on smaller ones) has two views:
+
+- **Mine** — your own questions.
+- **Group** — questions anyone in the group asked (same question asked twice shows once).
+
+Click one to see the saved answer instantly, sources included; **Ask again** gets a fresh
+one. While you type, matching past questions appear as **Asked before** suggestions.
+
+Privacy: the DM's questions are never shared (they may involve the adventure), and a
+player's answer that used their private notes stays in their own list. You can delete your
+own entries (✕, click twice); the DM can remove any shared one. Each person keeps their
+latest 150.
+
 ## Logins
 
 The login page has one password box; the password decides who you are.

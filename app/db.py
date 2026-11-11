@@ -106,6 +106,21 @@ CREATE TABLE IF NOT EXISTS campaign_status (
     created_at  TEXT NOT NULL
 );
 
+-- Ask-page history. shared = 1: other logged-in people may see it in the "Group" view.
+CREATE TABLE IF NOT EXISTS ask_history (
+    id            INTEGER PRIMARY KEY,
+    user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role          TEXT NOT NULL,
+    question      TEXT NOT NULL,
+    answer        TEXT NOT NULL,
+    sources_json  TEXT NOT NULL DEFAULT '[]',
+    scope         TEXT NOT NULL DEFAULT 'all',
+    shared        INTEGER NOT NULL DEFAULT 0,
+    created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ask_history_user ON ask_history(user_id, id);
+CREATE INDEX IF NOT EXISTS ask_history_shared ON ask_history(shared, id);
+
 CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
